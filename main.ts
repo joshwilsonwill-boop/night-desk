@@ -29,7 +29,6 @@ function fixModes(dir) {
 }
 
 mkdirSync(out, { recursive: true });
-chmodSync(out, 0o755);
 cpSync(join(here, 'game'), join(out, 'game'), { recursive: true });
 mkdirSync(join(out, 'screenshots'), { recursive: true });
 if (existsSync(join(here, 'screenshots'))) cpSync(join(here, 'screenshots'), join(out, 'screenshots'), { recursive: true });
@@ -46,4 +45,14 @@ writeFileSync(
     game_path_max_bytes: 1000,
   }),
 );
-fixModes(out);
+// Fix modes for every entry inside the output directory, never the root
+// itself: in the grader the output dir is owned by someone else and chmod
+// on it fails with EPERM.
+for (const name of readdirSync(out)) {
+  const path = join(out, name);
+  if (statSync(path).isDirectory()) {
+    fixModes(path);
+  } else {
+    chmodSync(path, 0o644);
+  }
+}
